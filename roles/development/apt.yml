@@ -9,9 +9,9 @@
     - git
     - python3
     - pip
-    - fish
     - npm
     - node
     - bat
     - fd-find
+    - fzf
     - timeshift
