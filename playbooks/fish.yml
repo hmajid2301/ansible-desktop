@@ -2,8 +2,13 @@
   roles:
     - role: dotstrap.fish
 
-- name: Install oh-my-fish plugin manager
-  shell: curl -L https://get.oh-my.fish | fish
+- name: Install fisher plugin manager
+  shell: curl https://git.io/fisher --create-dirs -sLo ~/.config/fish/functions/fisher.fish
 
-- name: Install fzf fish plugin
-  shell: omf install https://github.com/jethrokuan/fzf
+- name: Install fisher plugins
+  shell: fisher {{ item }
+  with_items:
+    - jethrokuan/fzf
+    - jethrokuan/z
+    - jorgebucaran/bax.fish
+    - jorgebucaran/nvm.fish
