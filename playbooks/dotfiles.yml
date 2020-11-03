@@ -4,6 +4,3 @@
     - echo ".cfg" >> .gitignore
     - git clone --bare git@gitlab.com:hmajid2301/dotfiles.git $HOME/.cfg
     - config checkout
-
-- name: Install fisher plugins
-  shell: echo ".cfg" >> .gitignore
