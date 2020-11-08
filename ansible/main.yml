@@ -71,6 +71,7 @@
       - gnome-tweak-tools
       - slack
       - fonts-firacode
+      - network-manager-vpnc-gnome
 
   - name: Get dotfiles
     shell:
