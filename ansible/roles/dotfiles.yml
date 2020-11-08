@@ -4,3 +4,7 @@
     - echo ".cfg" >> .gitignore
     - git clone --bare git@gitlab.com:hmajid2301/dotfiles.git $HOME/.cfg
     - config checkout
+    - dconf load / < full-backup
+
+- name: Copy wallpaper file
+  copy: src=wallpaper/ dest=/home/haseeb/pictures/wallpaper/
