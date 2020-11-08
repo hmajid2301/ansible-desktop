@@ -1,2 +1,143 @@
-- name: Hello ansible
-  shell: echo "Hello ansible" >> /tmp/log
+---
+# populate a fresh Pop!_os instance
+- hosts: 127.0.0.1
+  connection: local
+  vars:
+    local_user: "{{ ansible_user_id }}"
+    local_home: "{{ lookup('env','HOME') }}"
+  
+  roles:
+    - {role: gui_apps, tags: 'app'}
+    - {role: apt_packages, tags: 'apt'}
+    - {role: jaredhocutt.gnome_extensions, tags: 'gext'}
+
+
+  tasks:      
+  - name: Install aptitude using apt
+    apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+  - name: Install required system packages
+    apt: name={{ item }} state=latest update_cache=yes
+    loop: [ 'apt-transport-https', 'ca-certificates', 'curl', 'software-properties-common', 'python3-pip', 'virtualenv', 'python3-setuptools']
+
+  - name: Add Docker GPG apt Key
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Add Docker Repository
+    apt_repository:
+      repo: deb https://download.docker.com/linux/ubuntu bionic stable
+      state: present
+
+  - name: Update apt and install docker-ce
+    apt: update_cache=yes name=docker-ce state=latest
+
+  - name: Ensure group "docker" exists
+    become: yes
+    group:
+      name: docker
+      state: present
+
+  - name: Set user settings
+    become: yes
+    user:
+      name: "{{ local_user }}"
+      shell: /usr/bin/fish
+      groups: docker
+
+  - name: set the newgroup
+    become: yes
+    shell: "newgrp docker"
+
+  - name: Install apps with apt
+    apt: name={{ item }} state=present
+    with_items:
+      - wget
+      - vim
+      - tmux
+      - htop
+      - gtop
+      - git
+      - python3
+      - npm
+      - node
+      - bat
+      - fd-find
+      - fzf
+      - timeshift
+      - flameshot
+      - code
+      - gnome-tweak-tools
+      - slack
+      - fonts-firacode
+
+  - name: Get dotfiles
+    shell:
+    - alias config='/usr/bin/git --git-dir=$HOME/.cfg/ --work-tree=$HOME'
+    - echo ".cfg" >> .gitignore
+    - git clone --bare git@gitlab.com:hmajid2301/dotfiles.git $HOME/.cfg
+    - config checkout
+    - dconf load / < full-backup
+
+  - name: Copy wallpaper file
+    copy: src=wallpaper/ dest=/home/haseeb/pictures/wallpaper/
+
+  - name: Clone dotfiles
+    git:
+      repo: "https://github.com/kevinjelnl/dotfiles.git"
+      dest: "{{ local_home }}/dotfiles"
+      update: no
+
+  - name: Set dotfiles
+    shell: ./install
+    args:
+      chdir: "{{ local_home }}/dotfiles"
+
+  - name: load DCONF settings
+    shell: "dconf load '/' < '{{ gist_file }}'"
+    when: dconfisthere.stat.exists
+  
+  - name: Set multiple crons
+    cron:
+      name: "{{ item.name }}"
+      special_time: "{{ item.time }}"
+      job: "{{ item.job }}"
+    loop:
+      - { name: "dump dconf", time: "weekly", job: "/usr/bin/dconf dump / > {{ gist_file }}" }
+
+  - name: Install Fish Shell
+    roles:
+      - role: dotstrap.fish
+
+  - name: Install fisher plugin manager
+    shell: curl https://git.io/fisher --create-dirs -sLo ~/.config/fish/functions/fisher.fish
+
+  - name: Install fisher plugins
+    shell: fisher {{ item }
+    with_items:
+      - jethrokuan/fzf
+      - jethrokuan/z
+      - jorgebucaran/bax.fish
+      - jorgebucaran/nvm.fish
+
+  - hosts: servers
+    roles:
+      - role: jaredhocutt.gnome_extensions
+        vars:
+          gnome_extension_ids:
+            - 19
+            - 3628
+            - 1251
+            - 1160
+            - 302
+
+  - name: Set GNOME wallpaper
+    dconf: key="/org/gnome/desktop/background/picture-uri" value="'file:///home/jay/.wallpaper.jpg'"
+
+  - name: Copy lockscreenfile
+    copy: src=files/lockscreen.jpg dest=/home/jay/.lockscreen.jpg owner=jay group=jay mode=600
+
+  - name: Set lock screen background
+    become_user: jay
+    dconf: key="/org/gnome/desktop/screensaver/picture-uri" value="'file:///home/jay/.lockscreen.jpg'"
